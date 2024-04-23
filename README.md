@@ -1,0 +1,1 @@
+# nerdminer-rig
