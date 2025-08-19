@@ -15,10 +15,12 @@
 #define OLED_RESET    -1
 #define OLED_SDA D1
 #define OLED_SCL D2
+#define LED_PIN LED_BUILTIN
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // --- API ---
 const char* apiURL = "https://pool.nerdminers.org/pool/pool.status";
+String userApiURL = String("https://pool.nerdminers.org/users/") + WALLET_ADDR;
 
 // --- Timery ---
 unsigned long lastSwitch = 0;
@@ -30,6 +32,12 @@ int usersCount = 0, workersCount = 0, idleCount = 0, disconnectedCount = 0;
 String hashrate1m, hashrate5m, hashrate15m, hashrate1hr, hashrate6hr, hashrate1d, hashrate7d;
 float diff = 0.0, accepted = 0, rejected = 0, bestshare = 0;
 float SPS1m = 0, SPS5m = 0, SPS15m = 0, SPS1h = 0;
+
+// --- User Stats ---
+String u_hashrate1m, u_hashrate5m, u_hashrate1hr, u_hashrate1d, u_hashrate7d;
+unsigned long u_lastshare = 0, u_authorised = 0;
+int u_workers = 0;
+float u_shares = 0.0, u_bestshare = 0.0, u_bestever = 0.0;
 
 // --- Ikony ---
 const uint8_t bitmapclock[] = {0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0x03, 0xff, 0xc0, 0x07, 0xc3, 0xe0, 0x0e, 0x00, 0x70, 0x1c, 0x18, 0x38, 0x38, 0x18, 0x1c, 0x30, 0x18, 0x0c, 0x70, 0x18, 0x0e, 0x70, 0x18, 0x0e, 0x60, 0x18, 0x06, 0x60, 0x1c, 0x06, 0x60, 0x1f, 0x06, 0x60, 0x0f, 0x86, 0x70, 0x03, 0x8e, 0x70, 0x00, 0x0e, 0x30, 0x00, 0x0c, 0x38, 0x00, 0x1c, 0x1c, 0x00, 0x38, 0x0e, 0x00, 0x70, 0x07, 0xc3, 0xe0, 0x03, 0xff, 0xc0, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00};
@@ -58,6 +66,12 @@ void setupTime() {
   configTime(offsetSeconds + dstOffset, 0, "pool.ntp.org", "time.nist.gov");
 }
 
+void blinkLED() {
+  digitalWrite(LED_PIN, LOW);   // włącz LED
+  delay(100);
+  digitalWrite(LED_PIN, HIGH);  // wyłącz LED
+}
+
 // --- Funkcja pobierająca dane z API ---
 void fetchStats() {
   WiFiClientSecure client;
@@ -69,6 +83,8 @@ void fetchStats() {
     if (httpCode == HTTP_CODE_OK) {
       String payload = http.getString();
       Serial.println(payload);
+
+      blinkLED();
 
       // --- Sklej JSON w tablicę ---
       String json1, json2, json3;
@@ -113,6 +129,44 @@ void fetchStats() {
       SPS5m = doc[2]["SPS5m"] | 0.0;
       SPS15m = doc[2]["SPS15m"] | 0.0;
       SPS1h = doc[2]["SPS1h"] | 0.0;
+    }
+    http.end();
+  }
+}
+
+void fetchUserStats() {
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+
+  if (http.begin(client, userApiURL)) {
+    int httpCode = http.GET();
+    if (httpCode == HTTP_CODE_OK) {
+      String payload = http.getString();
+      Serial.println(payload);
+
+      blinkLED();
+
+      StaticJsonDocument<4096> doc;
+      DeserializationError error = deserializeJson(doc, payload);
+      if (error) {
+        Serial.print("Błąd JSON user: ");
+        Serial.println(error.c_str());
+        http.end();
+        return;
+      }
+
+      u_hashrate1m = doc["hashrate1m"].as<String>();
+      u_hashrate5m = doc["hashrate5m"].as<String>();
+      u_hashrate1hr = doc["hashrate1hr"].as<String>();
+      u_hashrate1d = doc["hashrate1d"].as<String>();
+      u_hashrate7d = doc["hashrate7d"].as<String>();
+      u_lastshare  = doc["lastshare"] | 0;
+      u_workers    = doc["workers"] | 0;
+      u_shares     = doc["shares"] | 0.0;
+      u_bestshare  = doc["bestshare"] | 0.0;
+      u_bestever   = doc["bestever"] | 0.0;
+      u_authorised = doc["authorised"] | 0;
     }
     http.end();
   }
@@ -215,11 +269,11 @@ void drawPage(int page) {
     display.setTextSize(1);
     display.drawBitmap(10, 31, bitmapstats, 24, 24, 1);
     display.setCursor(45, 35);
-    display.println("WIP: ");
+    display.println("WORKERS: " + String(u_workers));
     display.setCursor(45, 45);
-    display.println("WIP: ");
+    display.println("SHARES: " + String(u_shares, 0));
     display.setCursor(45, 55);
-    display.println("WIP: ");
+    display.println("BESTSHARE: " + String(u_bestshare, 2));
 
   }
   display.display();
@@ -238,6 +292,10 @@ void setup() {
   display.clearDisplay();
   display.display();
 
+  // --- LED ---
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH); // wyłączona na starcie
+
   // --- WiFi ---
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED) {
@@ -248,6 +306,7 @@ void setup() {
 
   setupTime();
   fetchStats();
+  fetchUserStats();
 }
 
 // --- Loop ---
@@ -264,5 +323,6 @@ void loop() {
   if (millis() - lastFetch > 60000) { // odświeżanie co minutę
     lastFetch = millis();
     fetchStats();
+    fetchUserStats();
   }
 }
