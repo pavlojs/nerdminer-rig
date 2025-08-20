@@ -22,12 +22,12 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 const char* apiURL = "https://pool.nerdminers.org/pool/pool.status";
 String userApiURL = String("https://pool.nerdminers.org/users/") + WALLET_ADDR;
 
-// --- Timery ---
+// --- Timers ---
 unsigned long lastSwitch = 0;
-const unsigned long pageInterval = 10000; // 10 sekund
+const unsigned long pageInterval = 10000; // 10 seconds
 int currentPage = 0;
 
-// --- Statystyki ---
+// --- Stats ---
 int usersCount = 0, workersCount = 0, idleCount = 0, disconnectedCount = 0;
 String hashrate1m, hashrate5m, hashrate15m, hashrate1hr, hashrate6hr, hashrate1d, hashrate7d;
 float diff = 0.0, accepted = 0, rejected = 0, bestshare = 0;
@@ -39,12 +39,12 @@ unsigned long u_lastshare = 0, u_authorised = 0;
 int u_workers = 0;
 float u_shares = 0.0, u_bestshare = 0.0, u_bestever = 0.0;
 
-// --- Ikony ---
+// --- Icons ---
 const uint8_t bitmapclock[] = {0x00, 0x00, 0x00, 0x00, 0xff, 0x00, 0x03, 0xff, 0xc0, 0x07, 0xc3, 0xe0, 0x0e, 0x00, 0x70, 0x1c, 0x18, 0x38, 0x38, 0x18, 0x1c, 0x30, 0x18, 0x0c, 0x70, 0x18, 0x0e, 0x70, 0x18, 0x0e, 0x60, 0x18, 0x06, 0x60, 0x1c, 0x06, 0x60, 0x1f, 0x06, 0x60, 0x0f, 0x86, 0x70, 0x03, 0x8e, 0x70, 0x00, 0x0e, 0x30, 0x00, 0x0c, 0x38, 0x00, 0x1c, 0x1c, 0x00, 0x38, 0x0e, 0x00, 0x70, 0x07, 0xc3, 0xe0, 0x03, 0xff, 0xc0, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00};
 const uint8_t bitmappool[] = {0x00, 0xc3, 0x00, 0x00, 0xc3, 0x00, 0x00, 0xc3, 0x00, 0x0f, 0xff, 0xf0, 0x1f, 0xff, 0xf8, 0x18, 0x00, 0x18, 0x18, 0x00, 0x18, 0x18, 0x00, 0x18, 0xf8, 0xff, 0x1f, 0xf8, 0xff, 0x1f, 0x18, 0xc3, 0x18, 0x18, 0xc3, 0x18, 0x18, 0xc3, 0x18, 0xf8, 0xc3, 0x1f, 0xf8, 0xff, 0x1f, 0x18, 0xff, 0x18, 0x18, 0x00, 0x18, 0x18, 0x00, 0x18, 0x18, 0x00, 0x38, 0x1f, 0xff, 0xf8, 0x0f, 0xff, 0xf0, 0x00, 0xc3, 0x00, 0x00, 0xc3, 0x00, 0x00, 0xc3, 0x00};
 const uint8_t bitmapstats[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x00, 0xc0, 0x00, 0x01, 0xe0, 0x00, 0x01, 0xe0, 0x00, 0x01, 0xe0, 0x00, 0x03, 0xf0, 0x00, 0x03, 0x30, 0x00, 0x03, 0x30, 0x00, 0x07, 0x38, 0x00, 0x7e, 0x18, 0x7e, 0x7e, 0x18, 0x7e, 0x00, 0x1c, 0xe0, 0x00, 0x0c, 0xc0, 0x00, 0x0c, 0xc0, 0x00, 0x0f, 0xc0, 0x00, 0x07, 0x80, 0x00, 0x07, 0x80, 0x00, 0x07, 0x80, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-// --- Funkcja ustawiająca czas ---
+// --- Time setting function ---
 void setupTime() {
   long offsetSeconds = UTC_OFFSET * 3600;
   long dstOffset = 0;
@@ -67,12 +67,12 @@ void setupTime() {
 }
 
 void blinkLED() {
-  digitalWrite(LED_PIN, LOW);   // włącz LED
+  digitalWrite(LED_PIN, LOW);   // turn on LED
   delay(100);
-  digitalWrite(LED_PIN, HIGH);  // wyłącz LED
+  digitalWrite(LED_PIN, HIGH);  // turn off LED
 }
 
-// --- Funkcja pobierająca dane z API ---
+// --- Function fetching data from the API ---
 void fetchStats() {
   WiFiClientSecure client;
   client.setInsecure();
@@ -86,7 +86,7 @@ void fetchStats() {
 
       blinkLED();
 
-      // --- Sklej JSON w tablicę ---
+      // --- Merge JSON into an array ---
       String json1, json2, json3;
       int firstNL = payload.indexOf('\n');
       int secondNL = payload.indexOf('\n', firstNL + 1);
@@ -97,7 +97,7 @@ void fetchStats() {
       }
       String jsonArray = "[" + json1 + "," + json2 + "," + json3 + "]";
 
-      // --- Parsowanie ---
+      // --- Parsing ---
       StaticJsonDocument<4096> doc;
       DeserializationError error = deserializeJson(doc, jsonArray);
       if (error) {
@@ -107,7 +107,7 @@ void fetchStats() {
         return;
       }
 
-      // --- Dane ze wszystkich 3 obiektów ---
+      // --- Data from all 3 objects ---
       usersCount = doc[0]["Users"] | 0;
       workersCount = doc[0]["Workers"] | 0;
       idleCount = doc[0]["Idle"] | 0;
@@ -172,7 +172,7 @@ void fetchUserStats() {
   }
 }
 
-// --- Funkcja rysująca strony ---
+// --- Function drawing pages ---
 void drawPage(int page) {
   display.clearDisplay();
   display.setTextSize(1);
@@ -184,7 +184,7 @@ void drawPage(int page) {
   localtime_r(&t, &timeinfo);
 
   if (page == 0) {
-    // Strona czasu
+
     display.setTextSize(2);
     display.setFont(&Org_01);
     display.setCursor(21, 12);
@@ -203,7 +203,7 @@ void drawPage(int page) {
     display.println(buf);
 
   } else if (page == 1) {
-    // Strona statystyk
+
     // display.println("Users: " + String(usersCount));
     // display.println("Workers: " + String(workersCount));
     // display.println("Idle: " + String(idleCount));
@@ -236,7 +236,7 @@ void drawPage(int page) {
     display.println(hashrate1m + "H/s");
 
   } else if (page == 2) {
-    // Strona hashrate
+
     display.setTextSize(2);
     display.setFont(&Org_01);
     display.setCursor(0, 11);
@@ -256,7 +256,7 @@ void drawPage(int page) {
     display.println("DIFF: " + String(diff));
 
   } else if (page == 3) {
-    // Strona stats
+
     display.setTextSize(2);
     display.setFont(&Org_01);
     display.setCursor(0, 11);
@@ -294,7 +294,7 @@ void setup() {
 
   // --- LED ---
   pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, HIGH); // wyłączona na starcie
+  digitalWrite(LED_PIN, HIGH); // disabled at startup
 
   // --- WiFi ---
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -320,7 +320,7 @@ void loop() {
   }
 
   static unsigned long lastFetch = 0;
-  if (millis() - lastFetch > 60000) { // odświeżanie co minutę
+  if (millis() - lastFetch > 60000) { // refreshing every minute
     lastFetch = millis();
     fetchStats();
     fetchUserStats();
