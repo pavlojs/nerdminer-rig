@@ -84,8 +84,6 @@ void fetchStats() {
       String payload = http.getString();
       Serial.println(payload);
 
-      blinkLED();
-
       // --- Merge JSON into an array ---
       String json1, json2, json3;
       int firstNL = payload.indexOf('\n');
@@ -144,8 +142,6 @@ void fetchUserStats() {
     if (httpCode == HTTP_CODE_OK) {
       String payload = http.getString();
       Serial.println(payload);
-
-      blinkLED();
 
       StaticJsonDocument<4096> doc;
       DeserializationError error = deserializeJson(doc, payload);
@@ -307,6 +303,7 @@ void setup() {
   setupTime();
   fetchStats();
   fetchUserStats();
+  blinkLED();
 }
 
 // --- Loop ---
@@ -324,5 +321,6 @@ void loop() {
     lastFetch = millis();
     fetchStats();
     fetchUserStats();
+    blinkLED();
   }
 }
