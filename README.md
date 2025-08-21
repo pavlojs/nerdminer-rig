@@ -51,7 +51,8 @@ Rename ```secrets.example``` to ```secrets.h```. Then open the project (```main.
 
 In Arduino IDE, install ESP8266 board support via Boards Manager and download the required libraries. Then select your ESP8266 board before uploading the code.
 
-1. Open **Arduino IDE → File → Preferences** and add this URL to *Additional Boards Manager URLs*:  
+1. Open **Arduino IDE → File → Preferences** and add this URL to *Additional Boards Manager URLs*:
+```http://arduino.esp8266.com/stable/package_esp8266com_index.json```
 
 2. Go to **Tools → Board → Boards Manager**, search for *ESP8266* and click *Install*.  
 
