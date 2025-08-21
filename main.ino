@@ -40,7 +40,6 @@ int u_workers = 0;
 float u_shares = 0.0, u_bestshare = 0.0, u_bestever = 0.0;
 
 // --- String Splitter ---
-
 String splitNumberUnit(String value) {
   int i = 0;
   while (i < value.length() && (isDigit(value[i]) || value[i] == '.')) {
@@ -56,8 +55,6 @@ String splitNumberUnit(String value) {
     return number;
   }
 }
-
-// --- Animations ---
 
 // --- Clock Page Animation ---
 #define CLOCK_W 32
@@ -227,9 +224,8 @@ void setupTime() {
   long dstOffset = 0;
 
   configTime(offsetSeconds, 0, "pool.ntp.org", "time.nist.gov");
-  // delay(2000);
   unsigned long tstart = millis();
-  // Waiting until time() returns a reasonable value (e.g., > 1600000000) – adjust as needed
+  // waiting until time() returns a reasonable value (e.g., > 1600000000) – adjust as needed
   time_t now;
   do {
     now = time(nullptr);
@@ -258,7 +254,7 @@ void blinkLED() {
   digitalWrite(LED_PIN, HIGH);  // turn off LED
 }
 
-  // Draws the start frame at the center of the screen
+  // draws the start frame at the center of the screen
 void drawStartupFrame() {
   unsigned long now = millis();
   if (now - startupLastMs >= STARTUP_FRAME_DELAY) {
@@ -268,7 +264,7 @@ void drawStartupFrame() {
 
   display.clearDisplay();
 
-  // wyśrodkowanie 48x48 na 128x64:
+  // centering 48x48 on 128x64
   int x = (SCREEN_WIDTH - STARTUP_W) / 2;   // = 40
   int y = (SCREEN_HEIGHT - STARTUP_H) / 2;  // = 8
 
@@ -485,13 +481,13 @@ void setup() {
   // --- WiFi ---
   WiFi.begin(WIFI_SSID, WIFI_PASS);
 
-  // Animate until connected (without blocking delay)
+  // animate until connected (without blocking delay)
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     // animate frames
     drawStartupFrame();
 
-    // optionally print dots every 500ms (non-blocking)
+    // print dots every 500ms (non-blocking)
     static unsigned long dotLast = 0;
     if (millis() - dotLast >= 500) {
       Serial.print(".");
@@ -520,7 +516,7 @@ void loop() {
     drawPage(currentPage);
   }
 
-    // refreshing/animations every ~42ms
+    // refreshing animations every ~42ms
   static unsigned long lastDraw = 0;
   if (now - lastDraw >= 42) {
     lastDraw = now;
