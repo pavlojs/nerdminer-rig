@@ -147,6 +147,10 @@ Parsing of the pool API responses and the number formatting have unit tests that
 pio test -e native
 ```
 
+## Security
+
+How to report a vulnerability, and what to know about Wi-Fi secrets, the pool connection and updates over Wi-Fi: [SECURITY.md](SECURITY.md).
+
 ## License
 
 [MIT](LICENSE)
