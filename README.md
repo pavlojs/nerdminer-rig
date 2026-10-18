@@ -38,8 +38,7 @@ You can also power your RIG with a micro-USB cable connected to the ESP8266 inst
 - Download the Gerber files and use a PCB manufacturer of your choice.  
 - A super-simple acrylic “case” is also available if you want a nice desktop stand.  
 - Solder all components in place, following the schematic and PCB markings.  
-- Flash the NerdMiner firmware on each ESP32 using the [microMiners Flashtool](https://github.com/BitMaker-hub/NerdMiner_v2?tab=readme-ov-file#microminers-flashtool-recommended).  
-- *Note: You need to use firmware **NMV2 1.6.3 on ESP32-WROOM***.  
+- Flash the NerdMiner firmware on each ESP32 from VS Code (see *Flashing the miners* below) or using the [microMiners Flashtool](https://github.com/BitMaker-hub/NerdMiner_v2?tab=readme-ov-file#microminers-flashtool-recommended).  
 
 #### Code configuration
 
@@ -96,6 +95,16 @@ In Arduino IDE, install ESP8266 board support via Boards Manager and download th
 4. Install the required libraries via **Sketch → Include Library → Manage Libraries**: *Adafruit SSD1306*, *Adafruit GFX Library* and *ArduinoJson* (version 7).  
 
 5. Connect the board by USB, select the correct Port, and upload the code.
+
+#### Flashing the miners
+
+PlatformIO can also write NerdMiner 1.8.3 to the ESP32 boards, one board at a time. It uses the ```ESP32-devKitv1_factory.bin``` image from the [NerdMiner 1.8.3 release](https://github.com/BitMaker-hub/NerdMiner_v2/releases/tag/nerdminer-release-V1.8.3).
+
+1. Connect one ESP32 by USB.
+2. Run ```pio run -e miner -t flash_miner```, or *miner → Custom → Flash NerdMiner* in the PlatformIO sidebar. The first run downloads the image and checks its SHA-256; if it does not match, nothing is flashed.
+3. If the upload cannot connect, hold the BOOT button on the ESP32 while it starts. With more than one board connected, choose the port: ```pio run -e miner -t flash_miner --upload-port /dev/ttyUSB0``` (```COM3``` on Windows).
+
+Writing the image also clears the Wi-Fi settings stored on the board, so the miner starts its setup network ```NerdMinerAP``` (password ```MineYourCoins```). There you enter your Wi-Fi, your BTC address and the pool: use the same pool and address as the display, see *Code configuration*.
 
 #### Tests
 
