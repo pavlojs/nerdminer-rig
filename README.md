@@ -82,7 +82,7 @@ In Arduino IDE, install ESP8266 board support via Boards Manager and download th
 
 2. Go to **Tools → Board → Boards Manager**, search for *ESP8266* and click *Install*.  
 
-3. Select your board under **Tools → Board → ESP8266 Boards (D1 Mini clone)**.  
+3. Select your board under **Tools → Board → ESP8266 Boards (D1 Mini clone)** and set **Tools → CPU Frequency** to *160 MHz*, which speeds up the encrypted connections to the pool.  
 
 4. Install the required libraries via **Sketch → Include Library → Manage Libraries**: *Adafruit SSD1306*, *Adafruit GFX Library* and *ArduinoJson* (version 7).  
 
