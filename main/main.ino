@@ -25,17 +25,21 @@ const String statusURL = String(POOL_URL) + (CKPOOL ? "/pool/pool.status" : "/ap
 const String userURL = String(POOL_URL) + (CKPOOL ? "/users/" : "/api/client/") + WALLET_ADDR;
 
 // --- Timers ---
-unsigned long lastSwitch = 0;
-const unsigned long pageInterval = 10000; // 10 seconds
+const unsigned long PAGE_INTERVAL = 10000;  // 10 seconds
+const unsigned long FETCH_INTERVAL = 60000; // refreshing every minute
+unsigned long lastSwitch = 0, lastFrame = 0, lastFetch = 0;
+
+// --- Pages ---
+#define PAGE_COUNT 4
 int currentPage = 0;
+uint8_t frameIdx = 0;
+bool redraw = true;
 
 // --- Stats ---
 PoolStats poolStats;
 UserStats userStats;
 
-// --- Animation control ---
-unsigned long animLastMillis0 = 0;
-uint8_t animFrameIdx0 = 0;
+// --- Startup animation ---
 unsigned long startupLastMs = 0;
 uint8_t startupFrameIdx = 0;
 
@@ -58,13 +62,12 @@ void blinkLED() {
   digitalWrite(LED_PIN, HIGH);  // turn off LED
 }
 
-  // draws the start frame at the center of the screen
+// draws the next startup frame at the center of the screen, once per frame delay
 void drawStartupFrame() {
   unsigned long now = millis();
-  if (now - startupLastMs >= STARTUP_FRAME_DELAY) {
-    startupLastMs = now;
-    startupFrameIdx = (startupFrameIdx + 1) % STARTUP_FRAME_COUNT;
-  }
+  if (now - startupLastMs < FRAME_DELAY) return;
+  startupLastMs = now;
+  startupFrameIdx = (startupFrameIdx + 1) % STARTUP_FRAME_COUNT;
 
   display.clearDisplay();
 
@@ -124,69 +127,64 @@ void printCentered(const char* text, int16_t y) {
   display.print(text);
 }
 
+// frame count of the page animation, 0 for a page without one
+uint8_t pageFrameCount(int page) {
+  switch (page) {
+    case 0: return CLOCK_FRAME_COUNT;
+    case 2: return POOL_FRAME_COUNT;
+    case 3: return USER_FRAME_COUNT;
+    default: return 0;
+  }
+}
+
 // --- Function drawing pages ---
 void drawPage(int page) {
   display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-
-  char buf[20];
   char value[16];
-  time_t t = time(nullptr);
-  struct tm timeinfo;
-  localtime_r(&t, &timeinfo);
 
   if (page == 0) {
 
     display.setTextSize(2);
-    display.setFont(&Org_01);
     display.setCursor(21, 12);
-    display.println("NerdMiner");
+    display.print("NerdMiner");
     display.drawLine(0, 21, SCREEN_WIDTH, 21, SSD1306_WHITE);
-    display.drawBitmap(5, 30, frames_clock[animFrameIdx0], CLOCK_W, CLOCK_H, SSD1306_WHITE);
+    display.drawBitmap(5, 30, frames_clock[frameIdx], CLOCK_W, CLOCK_H, SSD1306_WHITE);
+
+    char buf[20];
+    time_t t = time(nullptr);
+    struct tm timeinfo;
+    localtime_r(&t, &timeinfo);
 
     strftime(buf, sizeof(buf), "%H:%M", &timeinfo);
     display.setCursor(52, 55);
-    display.setTextSize(2);
-    display.println(buf);
+    display.print(buf);
 
     strftime(buf, sizeof(buf), "%d-%m-%Y", &timeinfo);
     display.setTextSize(1);
     display.setCursor(52, 39);
-    display.println(buf);
+    display.print(buf);
 
   } else if (page == 1) {
 
     display.setTextSize(2);
-    display.setFont(&Org_01);
-    display.setCursor(0, 11);
-    display.setTextWrap(0);
     display.setCursor(21, 11);
-    display.println("NerdMiner");
+    display.print("NerdMiner");
     display.drawRect(0, 22, 128, 42, 1);
     display.setTextSize(1);
-    display.setCursor(0, 30);
-    display.setTextWrap(0);
     display.setCursor(24, 33);
-    display.println("YOUR HASHRATE:");
+    display.print("YOUR HASHRATE:");
     display.setTextSize(2);
-    display.setTextWrap(0);
     formatSuffixed(userStats.hashrate, "H/s", value, sizeof(value));
     printCentered(value, 50);
 
   } else if (page == 2) {
 
     display.setTextSize(2);
-    display.setFont(&Org_01);
-    display.setCursor(0, 11);
-    display.setTextWrap(0);
     display.setCursor(13, 11);
-    display.println("Pool Stats");
+    display.print("Pool Stats");
     display.drawRect(0, 22, 128, 42, 1);
     display.setTextSize(1);
-    display.setCursor(0, 34);
-    display.setTextSize(1);
-    display.drawBitmap(5, 27, frames_pool[animFrameIdx0], POOL_W, POOL_H, SSD1306_WHITE);
+    display.drawBitmap(5, 27, frames_pool[frameIdx], POOL_W, POOL_H, SSD1306_WHITE);
     formatSuffixed(poolStats.hashrate, "H/s", value, sizeof(value));
     if (CKPOOL) {
       display.setCursor(45, 35);
@@ -205,16 +203,11 @@ void drawPage(int page) {
   } else if (page == 3) {
 
     display.setTextSize(2);
-    display.setFont(&Org_01);
-    display.setCursor(0, 11);
-    display.setTextWrap(0);
     display.setCursor(10, 11);
-    display.println("Your Stats");
+    display.print("Your Stats");
     display.drawRect(0, 22, 128, 42, 1);
     display.setTextSize(1);
-    display.setCursor(0, 34);
-    display.setTextSize(1);
-    display.drawBitmap(5, 27, frames_user[animFrameIdx0], USER_W, USER_H, SSD1306_WHITE);
+    display.drawBitmap(5, 27, frames_user[frameIdx], USER_W, USER_H, SSD1306_WHITE);
     if (CKPOOL) {
       display.setCursor(45, 35);
       display.printf("WORKERS: %ld", userStats.workers);
@@ -246,6 +239,9 @@ void setup() {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;);
   }
+  display.setFont(&Org_01);
+  display.setTextColor(SSD1306_WHITE);
+  display.setTextWrap(false);
   display.clearDisplay();
   display.display();
 
@@ -278,52 +274,38 @@ void setup() {
   fetchStats();
   fetchUserStats();
   blinkLED();
-
+  lastFetch = lastSwitch = millis();
 }
 
 // --- Loop ---
 void loop() {
   unsigned long now = millis();
-  if (now - lastSwitch > pageInterval) {
+
+  if (now - lastSwitch >= PAGE_INTERVAL) {
     lastSwitch = now;
-    currentPage++;
-    if (currentPage > 3) currentPage = 0;
-    drawPage(currentPage);
+    currentPage = (currentPage + 1) % PAGE_COUNT;
+    frameIdx = 0;
+    redraw = true;
   }
 
-    // refreshing animations every ~42ms
-  static unsigned long lastDraw = 0;
-  if (now - lastDraw >= 42) {
-    lastDraw = now;
-
-    if (currentPage == 0) {
-      if (now - animLastMillis0 >= CLOCK_FRAME_DELAY) {
-        animLastMillis0 = now;
-        animFrameIdx0 = (animFrameIdx0 + 1) % CLOCK_FRAME_COUNT;
-      }
-    }
-    if (currentPage == 2) {
-      if (now - animLastMillis0 >= POOL_FRAME_DELAY) {
-        animLastMillis0 = now;
-        animFrameIdx0 = (animFrameIdx0 + 1) % POOL_FRAME_COUNT;
-      }
-    }
-    if (currentPage == 3) {
-      if (now - animLastMillis0 >= USER_FRAME_DELAY) {
-        animLastMillis0 = now;
-        animFrameIdx0 = (animFrameIdx0 + 1) % USER_FRAME_COUNT;
-      }
-    }
-
-    // draw the current page (drawPage uses animFrameIdx0)
-    drawPage(currentPage);
+  // the static page is redrawn only on page switch and new data
+  uint8_t frameCount = pageFrameCount(currentPage);
+  if (frameCount && now - lastFrame >= FRAME_DELAY) {
+    lastFrame = now;
+    frameIdx = (frameIdx + 1) % frameCount;
+    redraw = true;
   }
 
-  static unsigned long lastFetch = 0;
-  if (millis() - lastFetch > 60000) { // refreshing every minute
-    lastFetch = millis();
+  if (now - lastFetch >= FETCH_INTERVAL) {
+    lastFetch = now;
     fetchStats();
     fetchUserStats();
     blinkLED();
+    redraw = true;
+  }
+
+  if (redraw) {
+    redraw = false;
+    drawPage(currentPage);
   }
 }
