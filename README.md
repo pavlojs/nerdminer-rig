@@ -6,7 +6,7 @@ I designed a dedicated PCB to serve as a mining RIG for up to 4 ESP boards runni
 
 This project assumes some familiarity with the Arduino IDE, basic electronics, and is designed to help save space for your miners (more performance, less bulk).
 
-It is intended to work with the official NerdMiner pool site ([pool.nerdminers.org](https://pool.nerdminers.org/)), as the ESP8266 code is tailored to parse data from this pool’s API. You can omit the OLED display and ESP8266 entirely and use the “bare” PCB as a rig. On the other hand, you can stack multiple PCBs together, using the 5V and GND pins, to save even more space.
+The ESP8266 reads the statistics from the public API of the pool your miners use: [public-pool.io](https://web.public-pool.io/) (the NerdMiner default) or your own [public-pool](https://github.com/benjamin-wilson/public-pool) instance, and ckpool pools such as the official NerdMiner pool [pool.nerdminers.org](https://pool.nerdminers.org/) or [solo.ckpool.org](https://solo.ckpool.org/). You can omit the OLED display and ESP8266 entirely and use the “bare” PCB as a rig. On the other hand, you can stack multiple PCBs together, using the 5V and GND pins, to save even more space.
 
 ## Requirements
 
@@ -45,7 +45,17 @@ You can also power your RIG with a micro-USB cable connected to the ESP8266 inst
 
 Copy this repo or download the latest release.  
 
-In the ```main``` folder, rename ```secrets.example``` to ```secrets.h```. Then open the project (```main/main.ino```) in Arduino IDE. Inside the secrets file, add your Wi-Fi credentials, set up a time zone, and enter your BTC wallet address.  
+In the ```main``` folder, rename ```secrets.example``` to ```secrets.h```. Then open the repository folder in VS Code, or ```main/main.ino``` in Arduino IDE. Inside the secrets file, add your Wi-Fi credentials, set up a time zone, enter your BTC wallet address and choose the pool.  
+
+The display shows the stats of the pool and wallet your miners actually mine on, so ```POOL_API``` and ```POOL_URL``` have to match the pool set in the NerdMiner configuration:
+
+| Pool | Pool in NerdMiner | ```POOL_API``` | ```POOL_URL``` |
+|---|---|---|---|
+| public-pool.io (NerdMiner default) | ```public-pool.io```, port ```21496``` | ```PoolApi::PublicPool``` | ```https://public-pool.io:40557``` |
+| pool.nerdminers.org | ```pool.nerdminers.org```, port ```3333``` | ```PoolApi::Ckpool``` | ```https://pool.nerdminers.org``` |
+| solo.ckpool.org | ```stratum.ckpool.org```, port ```3333``` | ```PoolApi::Ckpool``` | ```https://solo.ckpool.org``` |
+
+public-pool does not report share counts, so with it the *Your Stats* page shows workers and the best share only.  
 
 #### Programming
 

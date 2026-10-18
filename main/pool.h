@@ -5,7 +5,7 @@
 
 // --- Stats shown on the display ---
 struct PoolStats {
-  long users = 0;
+  long users = 0;  // ckpool only
   long workers = 0;
   double hashrate = 0;  // H/s
 };
@@ -13,9 +13,18 @@ struct PoolStats {
 struct UserStats {
   long workers = 0;
   double hashrate = 0;  // H/s
-  double shares = 0;
+  double shares = 0;  // ckpool only
   double bestShare = 0;
 };
+
+// --- Supported pool APIs ---
+enum class PoolApi { PublicPool, Ckpool };
+
+// --- public-pool (public-pool.io or a self-hosted instance) ---
+// /api/pool
+bool parsePublicPoolInfo(const char* body, PoolStats& out);
+// /api/client/<address>
+bool parsePublicPoolClient(const char* body, UserStats& out);
 
 // --- ckpool (pool.nerdminers.org, solo.ckpool.org) ---
 // /pool/pool.status holds one JSON object per line

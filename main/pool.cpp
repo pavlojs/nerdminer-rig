@@ -10,6 +10,49 @@ static const char* nextLine(const char* line) {
   return nl ? nl + 1 : nullptr;
 }
 
+// public-pool sends some numbers as strings
+static double toNumber(JsonVariantConst value) {
+  if (value.is<const char*>()) return strtod(value.as<const char*>(), nullptr);
+  return value | 0.0;
+}
+
+// --- public-pool ---
+bool parsePublicPoolInfo(const char* body, PoolStats& out) {
+  JsonDocument filter;
+  filter["totalHashRate"] = true;
+  filter["totalMiners"] = true;
+
+  JsonDocument doc;
+  if (deserializeJson(doc, body, DeserializationOption::Filter(filter)) || doc["totalHashRate"].isNull()) return false;
+
+  PoolStats stats;
+  stats.workers = doc["totalMiners"] | 0L;
+  stats.hashrate = toNumber(doc["totalHashRate"]);
+
+  out = stats;
+  return true;
+}
+
+bool parsePublicPoolClient(const char* body, UserStats& out) {
+  JsonDocument filter;
+  filter["workersCount"] = true;
+  filter["bestDifficulty"] = true;
+  filter["workers"][0]["hashRate"] = true;
+
+  JsonDocument doc;
+  if (deserializeJson(doc, body, DeserializationOption::Filter(filter)) || doc["workersCount"].isNull()) return false;
+
+  UserStats stats;
+  stats.workers = doc["workersCount"] | 0L;
+  stats.bestShare = toNumber(doc["bestDifficulty"]);
+  for (JsonVariantConst worker : doc["workers"].as<JsonArrayConst>()) {
+    stats.hashrate += toNumber(worker["hashRate"]);
+  }
+
+  out = stats;
+  return true;
+}
+
 // --- ckpool ---
 bool parseCkpoolStatus(const char* body, PoolStats& out) {
   PoolStats stats;

@@ -5,10 +5,10 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <time.h>
+#include "pool.h"
 #include "secrets.h"
 #include "Org_01.h"
 #include "animations.h"
-#include "pool.h"
 
 // --- OLED ---
 #define SCREEN_WIDTH 128
@@ -20,8 +20,9 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // --- API ---
-const String statusURL = "https://pool.nerdminers.org/pool/pool.status";
-const String userURL = String("https://pool.nerdminers.org/users/") + WALLET_ADDR;
+const bool CKPOOL = POOL_API == PoolApi::Ckpool;
+const String statusURL = String(POOL_URL) + (CKPOOL ? "/pool/pool.status" : "/api/pool");
+const String userURL = String(POOL_URL) + (CKPOOL ? "/users/" : "/api/client/") + WALLET_ADDR;
 
 // --- Timers ---
 unsigned long lastSwitch = 0;
@@ -109,7 +110,9 @@ int httpGet(const String& url, String& body) {
 void fetchStats() {
   String body;
   int code = httpGet(statusURL, body);
-  if (code != HTTP_CODE_OK || !parseCkpoolStatus(body.c_str(), poolStats)) {
+  bool parsed = code == HTTP_CODE_OK &&
+    (CKPOOL ? parseCkpoolStatus(body.c_str(), poolStats) : parsePublicPoolInfo(body.c_str(), poolStats));
+  if (!parsed) {
     Serial.printf("Pool stats not updated (HTTP %d)\n", code);
   }
 }
@@ -117,10 +120,14 @@ void fetchStats() {
 void fetchUserStats() {
   String body;
   int code = httpGet(userURL, body);
-  if (code == HTTP_CODE_NOT_FOUND) {
+  if (CKPOOL && code == HTTP_CODE_NOT_FOUND) {
     // ckpool has no stats file for an address that has not mined there
     userStats = UserStats();
-  } else if (code != HTTP_CODE_OK || !parseCkpoolUser(body.c_str(), userStats)) {
+    return;
+  }
+  bool parsed = code == HTTP_CODE_OK &&
+    (CKPOOL ? parseCkpoolUser(body.c_str(), userStats) : parsePublicPoolClient(body.c_str(), userStats));
+  if (!parsed) {
     Serial.printf("User stats not updated (HTTP %d)\n", code);
   }
 }
@@ -197,13 +204,20 @@ void drawPage(int page) {
     display.setCursor(0, 34);
     display.setTextSize(1);
     display.drawBitmap(5, 27, frames_pool[animFrameIdx0], POOL_W, POOL_H, SSD1306_WHITE);
-    display.setCursor(45, 35);
-    display.printf("USERS: %ld", poolStats.users);
-    display.setCursor(45, 45);
-    display.printf("WORKERS: %ld", poolStats.workers);
-    display.setCursor(45, 55);
     formatSuffixed(poolStats.hashrate, "H/s", value, sizeof(value));
-    display.printf("--> %s", value);
+    if (CKPOOL) {
+      display.setCursor(45, 35);
+      display.printf("USERS: %ld", poolStats.users);
+      display.setCursor(45, 45);
+      display.printf("WORKERS: %ld", poolStats.workers);
+      display.setCursor(45, 55);
+      display.printf("--> %s", value);
+    } else {
+      display.setCursor(45, 40);
+      display.printf("MINERS: %ld", poolStats.workers);
+      display.setCursor(45, 50);
+      display.printf("--> %s", value);
+    }
 
   } else if (page == 3) {
 
@@ -218,14 +232,22 @@ void drawPage(int page) {
     display.setCursor(0, 34);
     display.setTextSize(1);
     display.drawBitmap(5, 27, frames_user[animFrameIdx0], USER_W, USER_H, SSD1306_WHITE);
-    display.setCursor(45, 35);
-    display.printf("WORKERS: %ld", userStats.workers);
-    display.setCursor(45, 45);
-    formatSuffixed(userStats.shares, "", value, sizeof(value));
-    display.printf("SHARES: %s", value);
-    display.setCursor(45, 55);
-    formatSuffixed(userStats.bestShare, "", value, sizeof(value));
-    display.printf("BEST: %s", value);
+    if (CKPOOL) {
+      display.setCursor(45, 35);
+      display.printf("WORKERS: %ld", userStats.workers);
+      display.setCursor(45, 45);
+      formatSuffixed(userStats.shares, "", value, sizeof(value));
+      display.printf("SHARES: %s", value);
+      display.setCursor(45, 55);
+      formatSuffixed(userStats.bestShare, "", value, sizeof(value));
+      display.printf("BEST: %s", value);
+    } else {
+      display.setCursor(45, 40);
+      display.printf("WORKERS: %ld", userStats.workers);
+      display.setCursor(45, 50);
+      formatSuffixed(userStats.bestShare, "", value, sizeof(value));
+      display.printf("BEST: %s", value);
+    }
 
   }
   display.display();

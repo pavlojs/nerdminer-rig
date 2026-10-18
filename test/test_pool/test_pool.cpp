@@ -63,10 +63,68 @@ static const char* CKPOOL_USER_MINING = R"({
 static const char* NGINX_404 = "<html>\r\n<head><title>404 Not Found</title></head>\r\n</html>\r\n";
 
 static const char* PUBLIC_POOL_INFO =
-  R"({"totalHashRate":50795113923210080,"blockHeight":972025,"totalMiners":26197,"blocksFound":[],"fee":0})";
+  R"({"totalHashRate":50795113923210080,"blockHeight":972025,"totalMiners":26197,"blocksFound":[{"createdAt":"2026-07-10T03:31:12.132Z","height":957382,"minerAddress":"bc1qexampleaddress","worker":"bitaxe","payoutMode":"solo","sessionId":"8d26add7","blockHash":"00000000000000000000f4f8c91a6c400c42a40577fafa2ca2231d78f1955424","blockSubmissionResult":"SUCCESS!"},{"createdAt":"2026-04-03T02:07:53.140Z","height":943466,"minerAddress":"bc1qexampleaddress2","worker":"NerdOCTAXE","payoutMode":"solo","sessionId":"32d9004b","blockHash":null,"blockSubmissionResult":null}],"fee":0})";
+
+// public-pool.io, an address with one Bitaxe
+static const char* PUBLIC_POOL_CLIENT =
+  R"({"bestDifficulty":"294141974944674.8","workersCount":1,"accounting":{"totalAcceptedShares":315239,"totalCreditedDifficulty":2564854687,"acceptedSharesLast10Minutes":18,"creditedDifficultyLast10Minutes":147456,"acceptedSharesLastHour":111,"creditedDifficultyLastHour":909312,"acceptedSharesLastDay":2602,"creditedDifficultyLastDay":21315584,"hashRateLast10Minutes":1055531162664.96,"hashRateLastHour":1084851472738.9867,"bestSubmissionDifficulty":294141974944674.8,"bestSubmissionDifficultyAt":null,"workSinceLastBlock":0,"currentRoundAcceptedShares":0,"currentRoundNetworkDifficulty":0,"networkDifficultyPercent":0,"blockCandidateCount":0,"latestShareAt":"2026-10-18T16:30:00.000Z","protocolBreakdown":[]},"expectedPayout":null,"workers":[{"sessionId":"6a3c6164","name":"bitaxe","payoutMode":"solo","bestDifficulty":"21515036.56","hashRate":1164555152380.6155,"startTime":"2026-10-17T13:52:42.360Z","lastSeen":"2026-10-18T16:48:30.620Z"}]})";
+
+// public-pool.io, an address it has never seen: bestDifficulty is a number here
+static const char* PUBLIC_POOL_CLIENT_UNKNOWN =
+  R"({"bestDifficulty":0,"workersCount":0,"accounting":{"totalAcceptedShares":0,"totalCreditedDifficulty":0,"acceptedSharesLast10Minutes":0,"creditedDifficultyLast10Minutes":0,"acceptedSharesLastHour":0,"creditedDifficultyLastHour":0,"acceptedSharesLastDay":0,"creditedDifficultyLastDay":0,"hashRateLast10Minutes":0,"hashRateLastHour":0,"bestSubmissionDifficulty":0,"bestSubmissionDifficultyAt":null,"workSinceLastBlock":0,"currentRoundAcceptedShares":0,"currentRoundNetworkDifficulty":0,"networkDifficultyPercent":0,"blockCandidateCount":0,"latestShareAt":null,"protocolBreakdown":[]},"expectedPayout":null,"workers":[]})";
+
+// upstream public-pool layout (src/controllers/client/client.controller.ts) with four NerdMiners
+static const char* PUBLIC_POOL_CLIENT_NERDMINERS =
+  R"({"bestDifficulty":"1532.25","workersCount":4,"workers":[)"
+  R"({"sessionId":"a1","name":"NerdMinerV2","bestDifficulty":"1532.25","hashRate":54000.5,"startTime":"2026-10-18T10:00:00.000Z","lastSeen":"2026-10-18T16:48:30.620Z"},)"
+  R"({"sessionId":"a2","name":"NerdMinerV2","bestDifficulty":"812.10","hashRate":55000,"startTime":"2026-10-18T10:00:00.000Z","lastSeen":"2026-10-18T16:48:30.620Z"},)"
+  R"({"sessionId":"a3","name":"NerdMinerV2","bestDifficulty":"95.00","hashRate":56000,"startTime":"2026-10-18T10:00:00.000Z","lastSeen":"2026-10-18T16:48:30.620Z"},)"
+  R"({"sessionId":"a4","name":"NerdMinerV2","bestDifficulty":"12.00","hashRate":54999.5,"startTime":"2026-10-18T10:00:00.000Z","lastSeen":"2026-10-18T16:48:30.620Z"}]})";
 
 void setUp() {}
 void tearDown() {}
+
+// --- public-pool ---
+void test_public_pool_info() {
+  PoolStats stats;
+  TEST_ASSERT_TRUE(parsePublicPoolInfo(PUBLIC_POOL_INFO, stats));
+  TEST_ASSERT_EQUAL(26197, stats.workers);
+  TEST_ASSERT_DOUBLE_WITHIN(1e3, 50795113923210080.0, stats.hashrate);
+}
+
+void test_public_pool_client() {
+  UserStats stats;
+  TEST_ASSERT_TRUE(parsePublicPoolClient(PUBLIC_POOL_CLIENT, stats));
+  TEST_ASSERT_EQUAL(1, stats.workers);
+  TEST_ASSERT_DOUBLE_WITHIN(1, 1164555152380.6155, stats.hashrate);
+  TEST_ASSERT_DOUBLE_WITHIN(1, 294141974944674.8, stats.bestShare);
+}
+
+void test_public_pool_client_unknown_address() {
+  UserStats stats;
+  stats.workers = 7;
+  TEST_ASSERT_TRUE(parsePublicPoolClient(PUBLIC_POOL_CLIENT_UNKNOWN, stats));
+  TEST_ASSERT_EQUAL(0, stats.workers);
+  TEST_ASSERT_DOUBLE_WITHIN(0.001, 0, stats.hashrate);
+  TEST_ASSERT_DOUBLE_WITHIN(0.001, 0, stats.bestShare);
+}
+
+void test_public_pool_client_sums_workers() {
+  UserStats stats;
+  TEST_ASSERT_TRUE(parsePublicPoolClient(PUBLIC_POOL_CLIENT_NERDMINERS, stats));
+  TEST_ASSERT_EQUAL(4, stats.workers);
+  TEST_ASSERT_DOUBLE_WITHIN(0.01, 220000, stats.hashrate);
+  TEST_ASSERT_DOUBLE_WITHIN(0.01, 1532.25, stats.bestShare);
+}
+
+void test_public_pool_rejects_other_responses() {
+  PoolStats pool;
+  UserStats user;
+  TEST_ASSERT_FALSE(parsePublicPoolInfo(NGINX_404, pool));
+  TEST_ASSERT_FALSE(parsePublicPoolInfo(NERDMINERS_STATUS, pool));
+  TEST_ASSERT_FALSE(parsePublicPoolClient(NGINX_404, user));
+  TEST_ASSERT_FALSE(parsePublicPoolClient(CKPOOL_USER_MINING, user));
+}
 
 // --- ckpool status ---
 void test_ckpool_status_nerdminers() {
@@ -176,6 +234,11 @@ void test_format_suffixed_fits_display() {
 
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_public_pool_info);
+  RUN_TEST(test_public_pool_client);
+  RUN_TEST(test_public_pool_client_unknown_address);
+  RUN_TEST(test_public_pool_client_sums_workers);
+  RUN_TEST(test_public_pool_rejects_other_responses);
   RUN_TEST(test_ckpool_status_nerdminers);
   RUN_TEST(test_ckpool_status_with_extra_lines);
   RUN_TEST(test_ckpool_status_rejects_other_responses);
