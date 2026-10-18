@@ -59,7 +59,7 @@ public-pool does not report share counts, so with it the *Your Stats* page shows
 
 ```TIMEZONE``` takes a POSIX time zone string, which includes the daylight saving rules, so the clock switches on the right day by itself. Find the string for your zone in [posix_tz_db](https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv).  
 
-*Updating from v1.1: copy the new settings from ```secrets.example``` into your ```secrets.h```. ```POOL_API```, ```POOL_URL``` and ```TIMEZONE``` are new, ```UTC_OFFSET``` and ```DST_REGION``` are gone.*  
+*Updating from v1.1: copy the new settings from ```secrets.example``` into your ```secrets.h```. ```POOL_API```, ```POOL_URL```, ```TIMEZONE``` and ```OTA_PASSWORD``` are new, ```UTC_OFFSET``` and ```DST_REGION``` are gone.*  
 
 #### Programming
 
@@ -72,6 +72,15 @@ Connect the D1 Mini by USB and use the PlatformIO toolbar, or run these commands
 - Build: ```pio run```
 - Upload: ```pio run -t upload```
 - Serial monitor: ```pio device monitor```
+
+##### Updates over Wi-Fi
+
+Once the display runs, you can update it over Wi-Fi instead of opening the case:
+
+1. Set ```OTA_PASSWORD``` in ```main/secrets.h``` (letters, digits, ```.```, ```-``` and ```_```) and upload once over USB. With an empty password, updates over Wi-Fi stay off.
+2. Run ```pio run -e d1_mini_ota -t upload```, or *d1_mini_ota → Upload* in the PlatformIO sidebar. The display shows a progress bar and restarts with the new firmware.
+
+The upload looks for the board as ```nerdminer-rig.local```. If your computer does not resolve ```.local``` names, use the IP address the board prints on the serial monitor after connecting to Wi-Fi: ```pio run -e d1_mini_ota -t upload --upload-port 192.168.1.50```. During the upload the board connects back to your computer on a random port between 10000 and 60000, so a firewall on the computer has to let that connection in.
 
 ##### Arduino IDE
 

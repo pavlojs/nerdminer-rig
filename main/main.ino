@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include <ArduinoOTA.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <time.h>
@@ -23,6 +24,10 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 const bool CKPOOL = POOL_API == PoolApi::Ckpool;
 const String statusURL = String(POOL_URL) + (CKPOOL ? "/pool/pool.status" : "/api/pool");
 const String userURL = String(POOL_URL) + (CKPOOL ? "/users/" : "/api/client/") + WALLET_ADDR;
+
+// --- OTA ---
+#define OTA_HOSTNAME "nerdminer-rig"  // reachable as nerdminer-rig.local
+bool otaEnabled = false;
 
 // --- Timers ---
 const unsigned long PAGE_INTERVAL = 10000;  // 10 seconds
@@ -125,6 +130,40 @@ void printCentered(const char* text, int16_t y) {
   display.getTextBounds(text, 0, y, &x1, &y1, &w, &h);
   display.setCursor((SCREEN_WIDTH - w) / 2 - x1, y);
   display.print(text);
+}
+
+// --- Updates over Wi-Fi ---
+void drawUpdateProgress(unsigned int percent) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  printCentered("UPDATING", 28);
+  display.drawRect(14, 36, 100, 8, SSD1306_WHITE);
+  display.fillRect(14, 36, percent, 8, SSD1306_WHITE);
+  display.display();
+}
+
+// stays off without a password, so nobody else on the network can flash the board
+void setupOTA() {
+  if (!OTA_PASSWORD[0]) return;
+
+  ArduinoOTA.setHostname(OTA_HOSTNAME);
+  ArduinoOTA.setPassword(OTA_PASSWORD);
+  ArduinoOTA.onStart([]() { drawUpdateProgress(0); });
+  ArduinoOTA.onProgress([](unsigned int done, unsigned int total) {
+    // drawing takes longer than receiving a chunk, so only on a new percent
+    static unsigned int lastPercent = 0;
+    unsigned int percent = done * 100 / total;
+    if (percent != lastPercent) {
+      lastPercent = percent;
+      drawUpdateProgress(percent);
+    }
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("OTA update failed (error %u)\n", error);
+    redraw = true;
+  });
+  ArduinoOTA.begin();
+  otaEnabled = true;
 }
 
 // frame count of the page animation, 0 for a page without one
@@ -268,7 +307,10 @@ void setup() {
     // allow WiFi threads to run
     yield();
   }
-  Serial.println("\nWiFi connected");
+  Serial.print("\nWiFi connected, IP ");
+  Serial.println(WiFi.localIP());
+
+  setupOTA();
 
   setupTime();
   fetchStats();
@@ -279,6 +321,7 @@ void setup() {
 
 // --- Loop ---
 void loop() {
+  if (otaEnabled) ArduinoOTA.handle();
   unsigned long now = millis();
 
   if (now - lastSwitch >= PAGE_INTERVAL) {
