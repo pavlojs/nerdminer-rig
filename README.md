@@ -45,7 +45,7 @@ You can also power your RIG with a micro-USB cable connected to the ESP8266 inst
 
 Copy this repo or download the latest release.  
 
-Rename ```secrets.example``` to ```secrets.h```. Then open the project (```main.ino```) in Arduino IDE. Inside the secrets file, add your Wi-Fi credentials, set up a time zone, and enter your BTC wallet address.  
+In the ```main``` folder, rename ```secrets.example``` to ```secrets.h```. Then open the project (```main/main.ino```) in Arduino IDE. Inside the secrets file, add your Wi-Fi credentials, set up a time zone, and enter your BTC wallet address.  
 
 #### Programming
 
