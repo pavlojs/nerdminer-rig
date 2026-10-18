@@ -57,6 +57,10 @@ The display shows the stats of the pool and wallet your miners actually mine on,
 
 public-pool does not report share counts, so with it the *Your Stats* page shows workers and the best share only.  
 
+```TIMEZONE``` takes a POSIX time zone string, which includes the daylight saving rules, so the clock switches on the right day by itself. Find the string for your zone in [posix_tz_db](https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv).  
+
+*Updating from v1.1: copy the new settings from ```secrets.example``` into your ```secrets.h```. ```POOL_API```, ```POOL_URL``` and ```TIMEZONE``` are new, ```UTC_OFFSET``` and ```DST_REGION``` are gone.*  
+
 #### Programming
 
 ##### VS Code with PlatformIO

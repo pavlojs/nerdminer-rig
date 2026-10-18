@@ -40,33 +40,16 @@ unsigned long startupLastMs = 0;
 uint8_t startupFrameIdx = 0;
 
 // --- Time setting function ---
+// the TZ rules switch daylight saving time on their own, SNTP keeps the clock synced in the background
 void setupTime() {
-  long offsetSeconds = UTC_OFFSET * 3600;
-  long dstOffset = 0;
+  configTime(TIMEZONE, "pool.ntp.org", "time.nist.gov");
 
-  configTime(offsetSeconds, 0, "pool.ntp.org", "time.nist.gov");
-  unsigned long tstart = millis();
-  // waiting until time() returns a reasonable value (e.g., > 1600000000) – adjust as needed
-  time_t now;
-  do {
-    now = time(nullptr);
+  // waiting up to 10 s for the first sync, any time before 2024 means NTP has not answered yet
+  unsigned long start = millis();
+  while (time(nullptr) < 1704067200 && millis() - start < 10000) {
     drawStartupFrame(); // still animating the screen
-    yield();
-    delay(10); // short pause to avoid 100% CPU usage
-  } while (now < 100000 && (millis() - tstart) < 10000); // timeout ex. 10s
-
-  // time_t now = time(nullptr);
-  struct tm tmNow;
-  localtime_r(&now, &tmNow);
-  int month = tmNow.tm_mon + 1;
-
-  if (strcmp(DST_REGION, "EU") == 0) {
-    if (month > 3 && month < 10) dstOffset = 3600;
-  } else if (strcmp(DST_REGION, "US") == 0) {
-    if (month > 3 && month < 11) dstOffset = 3600;
+    delay(10);
   }
-
-  configTime(offsetSeconds + dstOffset, 0, "pool.ntp.org", "time.nist.gov");
 }
 
 void blinkLED() {
