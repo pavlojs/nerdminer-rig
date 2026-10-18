@@ -73,3 +73,9 @@ In Arduino IDE, install ESP8266 board support via Boards Manager and download th
 4. Install the required libraries via **Sketch → Include Library → Manage Libraries**: *Adafruit SSD1306*, *Adafruit GFX Library* and *ArduinoJson*.  
 
 5. Connect the board by USB, select the correct Port, and upload the code.
+
+#### Tests
+
+Parsing of the pool API responses and the number formatting have unit tests that run on your computer, without a board. They need a C++ compiler such as GCC or Clang:
+
+```pio test -e native```
