@@ -2,13 +2,13 @@
 #include <Wire.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#include <ArduinoJson.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <time.h>
 #include "secrets.h"
 #include "Org_01.h"
 #include "animations.h"
+#include "pool.h"
 
 // --- OLED ---
 #define SCREEN_WIDTH 128
@@ -20,8 +20,8 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // --- API ---
-const char* apiURL = "https://pool.nerdminers.org/pool/pool.status";
-String userApiURL = String("https://pool.nerdminers.org/users/") + WALLET_ADDR;
+const String statusURL = "https://pool.nerdminers.org/pool/pool.status";
+const String userURL = String("https://pool.nerdminers.org/users/") + WALLET_ADDR;
 
 // --- Timers ---
 unsigned long lastSwitch = 0;
@@ -29,33 +29,8 @@ const unsigned long pageInterval = 10000; // 10 seconds
 int currentPage = 0;
 
 // --- Stats ---
-int usersCount = 0, workersCount = 0, idleCount = 0, disconnectedCount = 0;
-String hashrate1m, hashrate5m, hashrate15m, hashrate1hr, hashrate6hr, hashrate1d, hashrate7d;
-float diff = 0.0, accepted = 0, rejected = 0, bestshare = 0;
-float SPS1m = 0, SPS5m = 0, SPS15m = 0, SPS1h = 0;
-
-// --- User Stats ---
-String u_hashrate1m, u_hashrate5m, u_hashrate1hr, u_hashrate1d, u_hashrate7d;
-unsigned long u_lastshare = 0, u_authorised = 0;
-int u_workers = 0;
-float u_shares = 0.0, u_bestshare = 0.0, u_bestever = 0.0;
-
-// --- String Splitter ---
-String splitNumberUnit(String value) {
-  int i = 0;
-  while (i < value.length() && (isDigit(value[i]) || value[i] == '.')) {
-    i++;
-  }
-
-  String number = value.substring(0, i);
-  String unit = value.substring(i);
-
-  if (unit.length() > 0) {
-    return number + " " + unit;
-  } else {
-    return number;
-  }
-}
+PoolStats poolStats;
+UserStats userStats;
 
 // --- Animation control ---
 unsigned long animLastMillis0 = 0;
@@ -117,100 +92,46 @@ void drawStartupFrame() {
   display.display();
 }
 
-// --- Function fetching data from the API ---
-void fetchStats() {
+// --- Functions fetching data from the API ---
+// Returns the HTTP status code, or a negative HTTPClient error
+int httpGet(const String& url, String& body) {
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
 
-  if (http.begin(client, apiURL)) {
-    int httpCode = http.GET();
-    if (httpCode == HTTP_CODE_OK) {
-      String payload = http.getString();
-      Serial.println(payload);
+  if (!http.begin(client, url)) return HTTPC_ERROR_CONNECTION_FAILED;
+  int code = http.GET();
+  if (code == HTTP_CODE_OK) body = http.getString();
+  http.end();
+  return code;
+}
 
-      // --- Merge JSON into an array ---
-      String json1, json2, json3;
-      int firstNL = payload.indexOf('\n');
-      int secondNL = payload.indexOf('\n', firstNL + 1);
-      if (firstNL > 0 && secondNL > 0) {
-        json1 = payload.substring(0, firstNL);
-        json2 = payload.substring(firstNL + 1, secondNL);
-        json3 = payload.substring(secondNL + 1);
-      }
-      String jsonArray = "[" + json1 + "," + json2 + "," + json3 + "]";
-
-      // --- Parsing ---
-      StaticJsonDocument<4096> doc;
-      DeserializationError error = deserializeJson(doc, jsonArray);
-      if (error) {
-        Serial.print("Błąd JSON: ");
-        Serial.println(error.c_str());
-        http.end();
-        return;
-      }
-
-      // --- Data from all 3 objects ---
-      usersCount = doc[0]["Users"] | 0;
-      workersCount = doc[0]["Workers"] | 0;
-      idleCount = doc[0]["Idle"] | 0;
-      disconnectedCount = doc[0]["Disconnected"] | 0;
-
-      hashrate1m = doc[1]["hashrate1m"].as<String>();
-      hashrate5m = doc[1]["hashrate5m"].as<String>();
-      hashrate15m = doc[1]["hashrate15m"].as<String>();
-      hashrate1hr = doc[1]["hashrate1hr"].as<String>();
-      hashrate6hr = doc[1]["hashrate6hr"].as<String>();
-      hashrate1d = doc[1]["hashrate1d"].as<String>();
-      hashrate7d = doc[1]["hashrate7d"].as<String>();
-
-      diff = doc[2]["diff"] | 0.0;
-      accepted = doc[2]["accepted"] | 0.0;
-      rejected = doc[2]["rejected"] | 0.0;
-      bestshare = doc[2]["bestshare"] | 0.0;
-      SPS1m = doc[2]["SPS1m"] | 0.0;
-      SPS5m = doc[2]["SPS5m"] | 0.0;
-      SPS15m = doc[2]["SPS15m"] | 0.0;
-      SPS1h = doc[2]["SPS1h"] | 0.0;
-    }
-    http.end();
+void fetchStats() {
+  String body;
+  int code = httpGet(statusURL, body);
+  if (code != HTTP_CODE_OK || !parseCkpoolStatus(body.c_str(), poolStats)) {
+    Serial.printf("Pool stats not updated (HTTP %d)\n", code);
   }
 }
 
 void fetchUserStats() {
-  WiFiClientSecure client;
-  client.setInsecure();
-  HTTPClient http;
-
-  if (http.begin(client, userApiURL)) {
-    int httpCode = http.GET();
-    if (httpCode == HTTP_CODE_OK) {
-      String payload = http.getString();
-      Serial.println(payload);
-
-      StaticJsonDocument<4096> doc;
-      DeserializationError error = deserializeJson(doc, payload);
-      if (error) {
-        Serial.print("Błąd JSON user: ");
-        Serial.println(error.c_str());
-        http.end();
-        return;
-      }
-
-      u_hashrate1m = doc["hashrate1m"].as<String>();
-      u_hashrate5m = doc["hashrate5m"].as<String>();
-      u_hashrate1hr = doc["hashrate1hr"].as<String>();
-      u_hashrate1d = doc["hashrate1d"].as<String>();
-      u_hashrate7d = doc["hashrate7d"].as<String>();
-      u_lastshare  = doc["lastshare"] | 0;
-      u_workers    = doc["workers"] | 0;
-      u_shares     = doc["shares"] | 0.0;
-      u_bestshare  = doc["bestshare"] | 0.0;
-      u_bestever   = doc["bestever"] | 0.0;
-      u_authorised = doc["authorised"] | 0;
-    }
-    http.end();
+  String body;
+  int code = httpGet(userURL, body);
+  if (code == HTTP_CODE_NOT_FOUND) {
+    // ckpool has no stats file for an address that has not mined there
+    userStats = UserStats();
+  } else if (code != HTTP_CODE_OK || !parseCkpoolUser(body.c_str(), userStats)) {
+    Serial.printf("User stats not updated (HTTP %d)\n", code);
   }
+}
+
+// prints text centered horizontally, with its baseline at y
+void printCentered(const char* text, int16_t y) {
+  int16_t x1, y1;
+  uint16_t w, h;
+  display.getTextBounds(text, 0, y, &x1, &y1, &w, &h);
+  display.setCursor((SCREEN_WIDTH - w) / 2 - x1, y);
+  display.print(text);
 }
 
 // --- Function drawing pages ---
@@ -220,6 +141,7 @@ void drawPage(int page) {
   display.setTextColor(SSD1306_WHITE);
 
   char buf[20];
+  char value[16];
   time_t t = time(nullptr);
   struct tm timeinfo;
   localtime_r(&t, &timeinfo);
@@ -259,8 +181,8 @@ void drawPage(int page) {
     display.println("YOUR HASHRATE:");
     display.setTextSize(2);
     display.setTextWrap(0);
-    display.setCursor(22, 50);
-    display.println(splitNumberUnit(u_hashrate1m) + "H/s");
+    formatSuffixed(userStats.hashrate, "H/s", value, sizeof(value));
+    printCentered(value, 50);
 
   } else if (page == 2) {
 
@@ -276,11 +198,12 @@ void drawPage(int page) {
     display.setTextSize(1);
     display.drawBitmap(5, 27, frames_pool[animFrameIdx0], POOL_W, POOL_H, SSD1306_WHITE);
     display.setCursor(45, 35);
-    display.println("USERS: " + String(usersCount));
+    display.printf("USERS: %ld", poolStats.users);
     display.setCursor(45, 45);
-    display.println("WORKERS: " + String(workersCount));
+    display.printf("WORKERS: %ld", poolStats.workers);
     display.setCursor(45, 55);
-    display.println("--> " + splitNumberUnit(hashrate1m) + "H/s");
+    formatSuffixed(poolStats.hashrate, "H/s", value, sizeof(value));
+    display.printf("--> %s", value);
 
   } else if (page == 3) {
 
@@ -296,11 +219,13 @@ void drawPage(int page) {
     display.setTextSize(1);
     display.drawBitmap(5, 27, frames_user[animFrameIdx0], USER_W, USER_H, SSD1306_WHITE);
     display.setCursor(45, 35);
-    display.println("WORKERS: " + String(u_workers));
+    display.printf("WORKERS: %ld", userStats.workers);
     display.setCursor(45, 45);
-    display.println("SHARES: " + String(u_shares, 0));
+    formatSuffixed(userStats.shares, "", value, sizeof(value));
+    display.printf("SHARES: %s", value);
     display.setCursor(45, 55);
-    display.println("BEST: " + String(u_bestshare, 2));
+    formatSuffixed(userStats.bestShare, "", value, sizeof(value));
+    display.printf("BEST: %s", value);
 
   }
   display.display();

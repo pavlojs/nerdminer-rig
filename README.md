@@ -70,7 +70,7 @@ In Arduino IDE, install ESP8266 board support via Boards Manager and download th
 
 3. Select your board under **Tools → Board → ESP8266 Boards (D1 Mini clone)**.  
 
-4. Install the required libraries via **Sketch → Include Library → Manage Libraries**: *Adafruit SSD1306*, *Adafruit GFX Library* and *ArduinoJson*.  
+4. Install the required libraries via **Sketch → Include Library → Manage Libraries**: *Adafruit SSD1306*, *Adafruit GFX Library* and *ArduinoJson* (version 7).  
 
 5. Connect the board by USB, select the correct Port, and upload the code.
 
