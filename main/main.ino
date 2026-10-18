@@ -87,11 +87,19 @@ void drawStartupFrame() {
 // --- Functions fetching data from the API ---
 // Returns the HTTP status code, or a negative HTTPClient error
 int httpGet(const String& url, String& body) {
-  WiFiClientSecure client;
-  client.setInsecure();
+  // public pools use HTTPS, a self-hosted public-pool serves plain HTTP by default;
+  // the TLS client is made only when needed, it reserves the BearSSL stack
+  std::unique_ptr<WiFiClient> client;
+  if (url.startsWith("https://")) {
+    WiFiClientSecure* secure = new WiFiClientSecure();
+    secure->setInsecure();
+    client.reset(secure);
+  } else {
+    client.reset(new WiFiClient());
+  }
   HTTPClient http;
 
-  if (!http.begin(client, url)) return HTTPC_ERROR_CONNECTION_FAILED;
+  if (!http.begin(*client, url)) return HTTPC_ERROR_CONNECTION_FAILED;
   int code = http.GET();
   if (code == HTTP_CODE_OK) body = http.getString();
   http.end();
