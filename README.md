@@ -147,6 +147,10 @@ Parsing of the pool API responses and the number formatting have unit tests that
 pio test -e native
 ```
 
+## Contributing
+
+Pull requests are welcome. Please open them against the ```dev``` branch: changes are tested on the hardware there before they reach ```main```. Run ```pio test -e native``` first, and [sign your commits](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits), as both branches accept signed commits only.
+
 ## Security
 
 How to report a vulnerability, and what to know about Wi-Fi secrets, the pool connection and updates over Wi-Fi: [SECURITY.md](SECURITY.md).
