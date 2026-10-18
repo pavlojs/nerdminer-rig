@@ -28,7 +28,7 @@ You can also power your RIG with a micro-USB cable connected to the ESP8266 inst
 
 ### Software
 
-- [Arduino IDE 2.0](https://www.arduino.cc/en/software)  
+- [VS Code](https://code.visualstudio.com/) with the [PlatformIO IDE](https://platformio.org/install/ide?install=vscode) extension, or [Arduino IDE 2.0](https://www.arduino.cc/en/software)  
 - [NM2 online flasher](https://flasher.bitronics.store/)  
 
 ## Build
@@ -49,6 +49,18 @@ In the ```main``` folder, rename ```secrets.example``` to ```secrets.h```. Then 
 
 #### Programming
 
+##### VS Code with PlatformIO
+
+Open the repository folder in VS Code with the PlatformIO IDE extension installed. On the first build PlatformIO downloads the ESP8266 platform and the library versions pinned in ```platformio.ini```.
+
+Connect the D1 Mini by USB and use the PlatformIO toolbar, or run these commands in the PlatformIO terminal:
+
+- Build: ```pio run```
+- Upload: ```pio run -t upload```
+- Serial monitor: ```pio device monitor```
+
+##### Arduino IDE
+
 In Arduino IDE, install ESP8266 board support via Boards Manager and download the required libraries. Then select your ESP8266 board before uploading the code.
 
 1. Open **Arduino IDE → File → Preferences** and add this URL to *Additional Boards Manager URLs*:
@@ -58,6 +70,6 @@ In Arduino IDE, install ESP8266 board support via Boards Manager and download th
 
 3. Select your board under **Tools → Board → ESP8266 Boards (D1 Mini clone)**.  
 
-4. Install the required libraries via **Sketch → Include Library → Manage Libraries**.  
+4. Install the required libraries via **Sketch → Include Library → Manage Libraries**: *Adafruit SSD1306*, *Adafruit GFX Library* and *ArduinoJson*.  
 
 5. Connect the board by USB, select the correct Port, and upload the code.
