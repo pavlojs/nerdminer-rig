@@ -131,6 +131,16 @@ void fetchUserStats() {
   }
 }
 
+// one line per refresh on the serial monitor, to check the board without looking at the display
+void logStats() {
+  char poolRate[16], userRate[16], best[16];
+  formatSuffixed(poolStats.hashrate, "H/s", poolRate, sizeof(poolRate));
+  formatSuffixed(userStats.hashrate, "H/s", userRate, sizeof(userRate));
+  formatSuffixed(userStats.bestShare, "", best, sizeof(best));
+  Serial.printf("Pool: %ld workers, %s | You: %ld workers, %s, best %s | free heap %u B\n",
+    poolStats.workers, poolRate, userStats.workers, userRate, best, ESP.getFreeHeap());
+}
+
 // prints text centered horizontally, with its baseline at y
 void printCentered(const char* text, int16_t y) {
   int16_t x1, y1;
@@ -323,6 +333,7 @@ void setup() {
   setupTime();
   fetchStats();
   fetchUserStats();
+  logStats();
   blinkLED();
   lastFetch = lastSwitch = millis();
 }
@@ -351,6 +362,7 @@ void loop() {
     lastFetch = now;
     fetchStats();
     fetchUserStats();
+    logStats();
     blinkLED();
     redraw = true;
   }

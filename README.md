@@ -122,7 +122,7 @@ The stats are refreshed every minute, and the LED on the D1 Mini blinks after ea
 
 ### Troubleshooting
 
-Open the serial monitor (115200 baud) to see what the board does.
+Open the serial monitor (115200 baud) to see what the board does. After each refresh it prints one line with the stats the display shows and the free memory, for example ```Pool: 26197 workers, 50.8 PH/s | You: 4 workers, 220 KH/s, best 1.53K | free heap … B```.
 
 - **The startup animation does not stop:** the board cannot join Wi-Fi. Check ```WIFI_SSID``` and ```WIFI_PASS```, and that the network is 2.4 GHz.
 - **Your stats stay at 0:** ```WALLET_ADDR```, ```POOL_API``` or ```POOL_URL``` do not match what the miners use. ckpool shows no stats for an address before its first shares.
