@@ -33,6 +33,7 @@ The OLED display connects to the D1 Mini with SDA on ```D1``` and SCL on ```D2``
 
 - [Git](https://git-scm.com/) to get the code  
 - [VS Code](https://code.visualstudio.com/) with the [PlatformIO IDE](https://platformio.org/install/ide?install=vscode) extension (recommended: it also updates the display over Wi-Fi, flashes the miners and runs the tests), or [Arduino IDE 2.0](https://www.arduino.cc/en/software)  
+- A USB-serial driver if a board does not show up as a port: CH340 for most D1 Mini clones, CP210x for most ESP32 DevKits  
 - Optional, for the miners: [NM2 online flasher](https://flasher.bitronics.store/) or the [microMiners Flashtool](https://github.com/BitMaker-hub/NerdMiner_v2?tab=readme-ov-file#microminers-flashtool-recommended)  
 
 ## Build
@@ -130,6 +131,7 @@ Open the serial monitor (115200 baud) to see what the board does. After each ref
 - **Your stats stay at 0:** ```WALLET_ADDR```, ```POOL_API``` or ```POOL_URL``` do not match what the miners use. ckpool shows no stats for an address before its first shares.
 - **```Pool stats not updated (HTTP …)```** or **```User stats not updated (HTTP …)```** on the serial monitor: the pool API did not answer, or ```POOL_API``` does not match the pool in ```POOL_URL```. A negative number means no connection; the display keeps the last values.
 - **The time is off by an hour:** check ```TIMEZONE```.
+- **The upload or serial monitor cannot open the port (access denied, port busy):** another program has it open, such as a second serial monitor. Close it, or unplug the board and plug it back in.
 
 ## Flashing the miners
 
