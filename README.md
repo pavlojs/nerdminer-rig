@@ -19,9 +19,9 @@ The ESP8266 reads the statistics from the public API of the pool your miners use
 - Electrolytic capacitor 220µF  
 - Barrel jack connector 2.1 × 5.5 mm  
 - 2-pin 2.54 mm female header, only to stack PCBs  
-- 5V power adapter (minimum 2A recommended; more if multiple PCBs are used)  
+- 5V power adapter: about 0.5 A per ESP32 miner, so at least 2 A for a full PCB (3 A leaves headroom), plus 2 A for each stacked PCB  
 
-You can also power your RIG with a micro-USB cable connected to the ESP8266 instead of using the barrel jack connector.
+Each ESP32 draws less on average, but Espressif asks for a supply that delivers at least 500 mA per module, for the short peaks when Wi-Fi transmits. You can also power your RIG with a micro-USB cable connected to the ESP8266 instead of using the barrel jack connector, but only with one or two miners and a USB charger: a computer's USB port gives 0.5–0.9 A, and with four miners on it a board restarts now and then.
 
 ### Schematics
 
