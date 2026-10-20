@@ -139,7 +139,9 @@ PlatformIO can write NerdMiner 1.8.3 to the ESP32 boards, one board at a time. I
 2. Run ```pio run -e miner -t flash_miner```, or *miner → Custom → Flash NerdMiner* in the PlatformIO sidebar. The first run downloads the image and checks its SHA-256; if it does not match, nothing is flashed.
 3. If the upload cannot connect, hold the BOOT button on the ESP32 while it starts. With more than one board connected, choose the port: ```pio run -e miner -t flash_miner --upload-port /dev/ttyUSB0``` (```COM3``` on Windows).
 
-Writing the image also clears the Wi-Fi settings stored on the board, so the miner starts its setup network ```NerdMinerAP``` (password ```MineYourCoins```). There you enter your Wi-Fi, your BTC address and the pool: use the same pool and address as the display, see [Configuration](#configuration).
+Writing the image also clears the settings stored on the board, so the miner starts its setup network ```NerdMinerAP``` (password ```MineYourCoins```). If the setup page does not open by itself after joining it, go to ```http://192.168.4.1```. There you enter your Wi-Fi, your BTC address and the pool: use the same pool and address as the display, see [Configuration](#configuration).
+
+The blue LED on the ESP32 shows the miner status. Pressing BOOT three times in a row turns it off until the next restart. Holding BOOT for 5 seconds erases the miner settings and starts ```NerdMinerAP``` again.
 
 ## Tests
 
