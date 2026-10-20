@@ -61,11 +61,13 @@ In the ```main``` folder, copy ```secrets.example``` to ```secrets.h```. Inside 
 
 The display shows the stats of the pool and wallet your miners actually mine on, so ```WALLET_ADDR```, ```POOL_API``` and ```POOL_URL``` have to match the BTC address and the pool set in the NerdMiner configuration:
 
-| Pool | Pool in NerdMiner | ```POOL_API``` | ```POOL_URL``` |
-|---|---|---|---|
-| public-pool.io (NerdMiner default) | ```public-pool.io```, port ```21496``` | ```PoolApi::PublicPool``` | ```https://public-pool.io:40557``` |
-| pool.nerdminers.org | ```pool.nerdminers.org```, port ```3333``` | ```PoolApi::Ckpool``` | ```https://pool.nerdminers.org``` |
-| solo.ckpool.org | ```stratum.ckpool.org```, port ```3333``` | ```PoolApi::Ckpool``` | ```https://solo.ckpool.org``` |
+| Pool | Fee | Pool in NerdMiner | ```POOL_API``` | ```POOL_URL``` |
+|---|---|---|---|---|
+| public-pool.io (NerdMiner default) | none below 50 TH/s | ```public-pool.io```, port ```21496``` | ```PoolApi::PublicPool``` | ```https://public-pool.io:40557``` |
+| pool.nerdminers.org | none | ```pool.nerdminers.org```, port ```3333``` | ```PoolApi::Ckpool``` | ```https://pool.nerdminers.org``` |
+| solo.ckpool.org | 2% | ```stratum.ckpool.org```, port ```3333``` | ```PoolApi::Ckpool``` | ```https://solo.ckpool.org``` |
+
+All three are solo pools: a block found by your miners pays its reward, less the fee, straight to your address. solo.ckpool.org sets a minimum share difficulty of 10000, which a NerdMiner almost never reaches, so your stats there stay at 0.
 
 For your own public-pool instance, set ```POOL_URL``` to the address of its API, by default ```http://<server>:3334```.
 
